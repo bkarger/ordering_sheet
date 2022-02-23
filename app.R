@@ -2,8 +2,10 @@ library(shiny)
 library(rsconnect)
 library(rdrop2)
 
-input_fields <- c("name", "email", "date", "vendor", "item",
-                 "cat", "price", "quantity", "rec_date", "note")
+input_fields <- c("name", "vendor", "item", "cat", "fund","quantity", "price", 
+                  "rec_date", "note")
+
+#unused_input_fields <- c("email", "date")
 
 outputDir <- "https://www.dropbox.com/home/ordering"
 
@@ -13,39 +15,40 @@ shinyApp(
     ui = fluidPage(theme = "bootstrap.css", 
                    shinyjs::useShinyjs(),
     div(id = "overall_form",
-    h2(strong("Ordering Form")),
-    shinyjs::hidden(div(id = "reset_msg", h3(em("Form Reset")))),
+    h1(strong("Ordering Form")),
+    #shinyjs::hidden(div(id = "reset_msg", h3(strong(em("Form Reset")), style="color:red"))),
     div(id = "form gen info",
         div(textInput("name", "Name", placeholder = "First Name"),
-            textInput("email", "Email Adress", 
-                      placeholder = "eid@colostate.edu"),
-            dateInput("date", "Date", value = Sys.Date())
+            #textInput("email", "Email Address", 
+                      #placeholder = "eid@colostate.edu"),
+            #dateInput("date", "Date", value = Sys.Date())
         )
         ),
     div(id = "form"),
-    shinyjs::hidden(
-        div(
-            id = "thankyou_msg",
-            h3(strong("Item submitted, would you like to input another?"))
-        )
-    ),
-    div(h4((strong("Item Information"))),
+    h4((strong("Item Information"))),
     div(id = "form_order_info",
             textInput("vendor", "Vendor", placeholder = "ex. VWR"),
             textInput("item", "Item", placeholder = "ex. 1000 ul tips"),
             textInput("cat", "Catalog #", placeholder = "83007-382"),
             numericInput("price", "Price $", value = ""),
+            textInput("fund", "Fund Number", placeholder = "RO1 or RAPTORs"),
             numericInput("quantity", "Quantity", value = 1),
-            dateRangeInput("rec_date", "Desired Receiving Date",
-                           start = Sys.Date()+2,
-                           end = Sys.Date()+5),
+            textInput("rec_date", "Desired Receiving Date", 
+                      placeholder = "1 week"),
             textInput("note", "Notes", placeholder = "ex. need one case")
-        )),
+        ),
+    shinyjs::hidden(
+        div(
+            id = "thankyou_msg",
+            h3(strong("Item submitted, would you like to input another? 
+                      Otherwise, click exit."), style="color:red")
+        )
+    ),
     div(id = "buttons",
         actionButton("submit", "Submit Item", class = "btn-primary"),
-        actionButton("order_complete", "Order Complete?", 
+        actionButton("order_complete", "Exit", 
                      class = "btn-primary"),
-        actionButton("reset", "Reset Form", class = "btn-primary")
+        #actionButton("reset", "Reset Form", class = "btn-primary")
     ),
     div(h2(strong("SPACE")), style = "color: white;")
     ),
@@ -76,7 +79,9 @@ shinyApp(
         saveData <- function(data) {
             data <- t(data)
             # Create a unique file name
-            fileName <- paste0(format(Sys.time(), "%d-%b-%Y %H.%M"), ".csv")
+            fileName <- paste0("order_by_", data[1], "_for_", 
+                               data[3], "_", "submitted_", 
+                               Sys.time(), ".csv")
             # Write the data to a temporary file locally
             filePath <- file.path(tempdir(), fileName)
             write.csv(data, filePath, row.names = TRUE, quote = TRUE)
@@ -86,21 +91,24 @@ shinyApp(
         
         observeEvent(input$submit, {
             saveData(formData())
-            shinyjs::hide("form gen info")
+            #shinyjs::hide("form gen info")
+            #shinyjs::hide("reset_msg")
+            shinyjs::reset("overall_form")
             shinyjs::reset("form_order_info")
             shinyjs::show("thankyou_msg")
         })
         
         observeEvent(input$order_complete, {
-            saveData(formData())
             shinyjs::hide("overall_form")
             shinyjs::show("quit_msg")
         })
         
-        observeEvent(input$reset, {
+        #observeEvent(input$reset, {
             shinyjs::reset("overall_form")
+            shinyjs::show("form gen info")
             shinyjs::show("reset_msg")
-        })
+            shinyjs::hide("thankyou_msg")
+        #})
         
         loadData <- function() {
             # Read all the files into a list
